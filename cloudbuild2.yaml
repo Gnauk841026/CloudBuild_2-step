@@ -1,0 +1,10 @@
+steps:
+- name: 'gcr.io/cloud-builders/echo'
+  args: ['hello']
+
+# 如果您想要將"hello"作為構建結果保存,可以添加以下行:
+# images: []
+# 注意: 即使沒有實際的鏡像被創建,這一行也是必要的,以確保輸出被保存
+
+options:
+  defaultLogsBucketBehavior: REGIONAL_USER_OWNED_BUCKET
