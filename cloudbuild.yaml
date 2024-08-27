@@ -1,0 +1,43 @@
+steps:
+# 檢出特定的 Git SHA
+- name: 'gcr.io/cloud-builders/git'
+  args: ['checkout', '${_COMMIT_SHA}']
+
+# 檢查並創建 Artifact Registry 倉庫
+- name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+  entrypoint: 'bash'
+  args:
+    - '-c'
+    - |
+      gcloud artifacts repositories describe my-registry --location=asia-east1 || \
+      gcloud artifacts repositories create my-registry --repository-format=docker --location=asia-east1 --description="Docker repository"
+
+# 構建 Docker 鏡像
+- name: 'gcr.io/cloud-builders/docker'
+  dir: 'app'
+  args: ['build', '-t', 'asia-east1-docker.pkg.dev/terraform-429505/my-registry/hello-js:${_COMMIT_SHA}', '.']
+
+# 推送 Docker 鏡像到 Artifact Registry
+- name: 'gcr.io/cloud-builders/docker'
+  dir: 'app'
+  args: ['push', 'asia-east1-docker.pkg.dev/terraform-429505/my-registry/hello-js:${_COMMIT_SHA}']
+
+# 發送 Pub/Sub 消息觸發部署
+- name: 'gcr.io/cloud-builders/gcloud'
+  args:
+    - 'pubsub'
+    - 'topics'
+    - 'publish'
+    - '${_PUBSUB_TOPIC}'
+    - '--message'
+    - '{"image": "asia-east1-docker.pkg.dev/terraform-429505/my-registry/hello-js:${_COMMIT_SHA}"}'
+
+images:
+- 'asia-east1-docker.pkg.dev/terraform-429505/my-registry/hello-js:${_COMMIT_SHA}'
+
+substitutions:
+  _PUBSUB_TOPIC: 'projects/terraform-429505/topics/deploy-trigger'  # 替換為您的 Pub/Sub 主題
+  _COMMIT_SHA: ${COMMIT_SHA}  # 使用內建的 COMMIT_SHA 變量作為默認值
+
+options:
+  defaultLogsBucketBehavior: REGIONAL_USER_OWNED_BUCKET
