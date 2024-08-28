@@ -57,7 +57,7 @@ steps:
       sudo docker rm hello-js || true
       
       # 運行新容器
-      sudo docker run -d --name hello-js -p 80:3000 $deploy_image
+      sudo docker run -d --name hello-js -p 80:8080 $deploy_image
       
       # 顯示正在運行的容器
       sudo docker ps
