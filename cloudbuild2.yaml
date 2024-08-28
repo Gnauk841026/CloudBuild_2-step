@@ -1,3 +1,7 @@
+# 此配置支持兩種部署模式：
+# 1. 自動部署：通過 Pub/Sub 觸發，使用 _PUB_SUB_MESSAGE 中的 image
+# 2. 手動部署/回滾：手動觸發，指定 _SPECIFIED_IMAGE
+
 steps:
 - name: 'gcr.io/cloud-builders/gcloud'
   entrypoint: 'bash'
@@ -8,10 +12,18 @@ steps:
     set -x
     
     # 解析 Pub/Sub 消息中的 image
-    IMAGE=$(echo $_PUB_SUB_MESSAGE | python -c "import sys, json; print(json.load(sys.stdin)['image'])")
+    if [ -n "$_PUB_SUB_MESSAGE" ]; then
+      PARSED_IMAGE=$(echo $_PUB_SUB_MESSAGE | python3 -c "import sys, json; print(json.load(sys.stdin)['image'])")
+    else
+      PARSED_IMAGE=""
+    fi
     
-    # 如果指定了 SPECIFIED_IMAGE，則使用它進行回滾
-    DEPLOY_IMAGE=${_SPECIFIED_IMAGE:-$IMAGE}
+    # 決定要部署的 image
+    DEPLOY_IMAGE=${_SPECIFIED_IMAGE:-$PARSED_IMAGE}
+    if [ -z "$DEPLOY_IMAGE" ]; then
+      echo "錯誤：沒有指定要部署的 image"
+      exit 1
+    fi
     echo "正在部署鏡像: $DEPLOY_IMAGE"
     
     # 安裝 SSH 客戶端
@@ -24,10 +36,10 @@ steps:
     chmod 600 /root/.ssh/id_rsa
     
     # 將 SSH 密鑰添加到 known_hosts
-    ssh-keyscan -H 35.194.144.97 >> /root/.ssh/known_hosts
+    ssh-keyscan -H 35.234.30.55 >> /root/.ssh/known_hosts
     
     # 連接到 VM 並執行部署腳本
-    ssh -i /root/.ssh/id_rsa -o StrictHostKeyChecking=no lucifer_suriel@35.194.144.97 << EOF
+    ssh -i /root/.ssh/id_rsa -o StrictHostKeyChecking=no lucifer_suriel@35.234.30.55 << EOF
       set -e
       set -x
       
@@ -57,11 +69,10 @@ steps:
     EOF
 
 substitutions:
-  _PUB_SUB_MESSAGE: ''  # 這將由 Pub/Sub 觸發器自動填充
-  _SPECIFIED_IMAGE: ''  # 這可以在手動觸發構建時指定用於回滾
+  _PUB_SUB_MESSAGE: ''  # 由 Pub/Sub 觸發器自動填充，手動觸發時留空
+  _SPECIFIED_IMAGE: ''  # 用於手動指定部署的 image，例如回滾到特定版本
 
 timeout: '1200s'
 
-timeout: '1200s'
 options:
   defaultLogsBucketBehavior: REGIONAL_USER_OWNED_BUCKET
