@@ -55,19 +55,20 @@ steps:
       # 配置 Docker 以使用 gcloud 作為憑證助手
       gcloud auth configure-docker asia-east1-docker.pkg.dev --quiet
       
-      # 停止所有運行中的容器
-      sudo docker stop $(sudo docker ps -aq) || true
+      # 停止並移除舊的 hello-js 容器（如果存在）
+      sudo docker stop hello-js 2>/dev/null || true
+      sudo docker rm hello-js 2>/dev/null || true
       
-      # 刪除所有容器
-      sudo docker rm $(sudo docker ps -aq) || true
+      # 清理未使用的 Docker 資源
+      sudo docker system prune -af
       
-      # 刪除所有映像
-      sudo docker rmi $(sudo docker images -q) || true
+      echo "拉取新的映像: $deploy_image"
+      if ! sudo docker pull $deploy_image; then
+        echo "拉取映像失敗，退出部署"
+        exit 1
+      fi
       
-      # 拉取新的映像
-      sudo -E docker pull $deploy_image
-      
-      # 運行新容器
+      echo "運行新容器..."
       if sudo docker run -d --name hello-js -p 80:8080 $deploy_image; then
         echo "新容器成功啟動"
         
@@ -75,6 +76,12 @@ steps:
         sleep 10
         if sudo docker ps | grep -q hello-js; then
           echo "部署成功"
+          
+          echo "顯示正在運行的容器:"
+          sudo docker ps
+          
+          echo "顯示容器日誌:"
+          sudo docker logs hello-js
         else
           echo "部署失敗，容器未能持續運行"
           exit 1
@@ -83,12 +90,6 @@ steps:
         echo "新容器啟動失敗"
         exit 1
       fi
-      
-      # 顯示正在運行的容器
-      sudo docker ps
-      
-      # 顯示容器日誌
-      sudo docker logs hello-js
     EOF
 substitutions:
   _SPECIFIED_IMAGE: ''
