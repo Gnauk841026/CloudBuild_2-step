@@ -1,4 +1,11 @@
 steps:
+- name: 'gcr.io/cloud-builders/git'
+  entrypoint: 'bash'
+  args:
+  - '-c'
+  - |
+    git rev-parse HEAD > /workspace/commit_hash.txt
+
 - name: 'gcr.io/cloud-builders/gcloud'
   entrypoint: 'bash'
   args:
@@ -11,8 +18,8 @@ steps:
     if [ -n "$_SPECIFIED_IMAGE" ]; then
       deploy_image="$_SPECIFIED_IMAGE"
     else
-      # 獲取最新的鏡像標籤
-      latest_tag=$(gcloud artifacts docker images list asia-east1-docker.pkg.dev/terraform-429505/my-registry/hello-js --include-tags --sort-by=~CREATE_TIME --limit=1 | awk '/TAGS:/ {print $2}')
+      # 使用 Git commit hash 作為最新的標籤
+      latest_tag=$(cat /workspace/commit_hash.txt)
       deploy_image="asia-east1-docker.pkg.dev/terraform-429505/my-registry/hello-js:$latest_tag"
     fi
     
@@ -93,6 +100,7 @@ steps:
       # 顯示容器日誌
       sudo docker logs hello-js
     EOF
+
 substitutions:
   _SPECIFIED_IMAGE: ''
 timeout: '1200s'
