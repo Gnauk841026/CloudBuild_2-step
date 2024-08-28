@@ -67,7 +67,7 @@ steps:
       
       # 顯示容器日誌
       sudo docker logs hello-js
-EOF
+    EOF
 substitutions:
   '_SPECIFIED_IMAGE': ''
 timeout: '1200s'
