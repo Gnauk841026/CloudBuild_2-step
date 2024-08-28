@@ -56,16 +56,21 @@ steps:
         sudo apt-get install -y apt-transport-https ca-certificates curl gnupg lsb-release
         
         echo "步驟6: 添加 Docker 的官方 GPG 密鑰"
-        curl -fsSL https://download.docker.com/linux/debian/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
+        sudo install -m 0755 -d /etc/apt/keyrings
+        curl -fsSL https://download.docker.com/linux/debian/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+        sudo chmod a+r /etc/apt/keyrings/docker.gpg
         
         echo "步驟7: 設置穩定版倉庫"
-        echo "deb [arch=\$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/debian \$(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+        echo \
+          "deb [arch=\$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/debian \
+          \$(. /etc/os-release && echo "\$VERSION_CODENAME") stable" | \
+          sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
         
         echo "步驟8: 再次更新包索引"
         sudo apt-get update
         
         echo "步驟9: 安裝 Docker Engine"
-        sudo apt-get install -y docker-ce docker-ce-cli containerd.io
+        sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
         
         echo "步驟10: 檢查 Docker 安裝結果"
         docker --version
@@ -92,7 +97,7 @@ steps:
       sudo -E docker pull $deploy_image
       
       echo "步驟17: 運行新容器"
-      if sudo docker run -d --name hello-js -p 80:8080 $deploy_image; then
+      if sudo docker run -d --name hello-js -p 80:3000 $deploy_image; then
         echo "新容器成功啟動"
         
         echo "步驟18: 檢查容器是否正常運行"
