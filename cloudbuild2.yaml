@@ -39,13 +39,13 @@ steps:
       gcloud auth configure-docker asia-east1-docker.pkg.dev --quiet
       
       # 停止所有運行中的容器
-      sudo docker stop $(sudo docker ps -aq) || true
+      sudo docker stop \$(sudo docker ps -aq) || true
       
       # 刪除所有容器
-      sudo docker rm $(sudo docker ps -aq) || true
+      sudo docker rm \$(sudo docker ps -aq) || true
       
       # 刪除所有映像
-      sudo docker rmi $(sudo docker images -q) || true
+      sudo docker rmi \$(sudo docker images -q) || true
       
       # 拉取新的映像
       sudo -E docker pull $deploy_image
@@ -72,7 +72,7 @@ steps:
       
       # 顯示容器日誌
       sudo docker logs hello-js
-EOF
+    EOF
 substitutions:
   '_SPECIFIED_IMAGE': ''
 timeout: '1200s'
