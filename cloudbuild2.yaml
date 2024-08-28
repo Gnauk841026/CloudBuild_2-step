@@ -61,9 +61,10 @@ steps:
         sudo chmod a+r /etc/apt/keyrings/docker.gpg
         
         echo "步驟7: 設置穩定版倉庫"
+        DEBIAN_CODENAME=\$(lsb_release -cs)
         echo \
           "deb [arch=\$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/debian \
-          \$(. /etc/os-release && echo "\$VERSION_CODENAME") stable" | \
+          \$DEBIAN_CODENAME stable" | \
           sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
         
         echo "步驟8: 再次更新包索引"
