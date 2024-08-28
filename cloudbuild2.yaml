@@ -59,10 +59,7 @@ steps:
         curl -fsSL https://download.docker.com/linux/debian/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
         
         echo "步驟7: 設置穩定版倉庫"
-        echo \
-          "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] \
-          https://download.docker.com/linux/debian \
-          $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+        echo "deb [arch=\$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/debian \$(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
         
         echo "步驟8: 再次更新包索引"
         sudo apt-get update
@@ -83,19 +80,19 @@ steps:
       gcloud auth configure-docker asia-east1-docker.pkg.dev --quiet
       
       echo "步驟13: 停止所有運行中的容器"
-      sudo docker stop $(sudo docker ps -aq) || true
+      sudo docker stop \$(sudo docker ps -aq) || true
       
       echo "步驟14: 刪除所有容器"
-      sudo docker rm $(sudo docker ps -aq) || true
+      sudo docker rm \$(sudo docker ps -aq) || true
       
       echo "步驟15: 刪除所有映像"
-      sudo docker rmi $(sudo docker images -q) || true
+      sudo docker rmi \$(sudo docker images -q) || true
       
       echo "步驟16: 拉取新的映像"
       sudo -E docker pull $deploy_image
       
       echo "步驟17: 運行新容器"
-      if sudo docker run -d --name hello-js -p 80:3000 $deploy_image; then
+      if sudo docker run -d --name hello-js -p 80:8080 $deploy_image; then
         echo "新容器成功啟動"
         
         echo "步驟18: 檢查容器是否正常運行"
@@ -117,7 +114,7 @@ steps:
       
       echo "步驟20: 顯示容器日誌"
       sudo docker logs hello-js
-EOF
+    EOF
 substitutions:
   '_SPECIFIED_IMAGE': ''
 timeout: '1200s'
