@@ -51,7 +51,7 @@ steps:
       sudo -E docker pull $deploy_image
       
       # 運行新容器
-      if sudo docker run -d --name hello-js -p 80:3000 $deploy_image; then
+      if sudo docker run -d --name hello-js -p 80:8080 $deploy_image; then
         echo "新容器成功啟動"
         
         # 檢查容器是否正常運行（這裡等待 10 秒後檢查）
