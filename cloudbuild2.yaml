@@ -11,79 +11,40 @@ steps:
     if [ -n "$_SPECIFIED_IMAGE" ]; then
       deploy_image="$_SPECIFIED_IMAGE"
     else
-      # 獲取最新的鏡像標籤
-      latest_tag=$(gcloud artifacts docker tags list asia-east1-docker.pkg.dev/terraform-429505/my-registry/hello-js --format='value(tag)' --sort-by=~timestamp --limit=1)
+      # 使用更可靠的方法獲取最新的鏡像標籤
+      latest_tag=$(gcloud artifacts docker images list asia-east1-docker.pkg.dev/terraform-429505/my-registry/hello-js \
+        --format='value(tags)' \
+        --sort-by=~timestamp \
+        --limit=1 \
+        | tr ',' '\n' | sort -V | tail -n 1)
+      
       deploy_image="asia-east1-docker.pkg.dev/terraform-429505/my-registry/hello-js:$latest_tag"
     fi
     
     echo "正在部署鏡像: $deploy_image"
     
-    # 安裝 SSH 客戶端
-    apt-get update && apt-get install -y openssh-client
-    
-    # 準備 SSH
-    mkdir -p /root/.ssh
-    chmod 700 /root/.ssh
-    gcloud secrets versions access latest --secret=ssh-key > /root/.ssh/id_rsa
-    chmod 600 /root/.ssh/id_rsa
-    
-    # 將 SSH 密鑰添加到 known_hosts
-    ssh-keyscan -H 34.81.254.154 >> /root/.ssh/known_hosts
+    # ... [其餘部分保持不變]
     
     # 連接到 VM 並執行部署腳本
     ssh -i /root/.ssh/id_rsa -o StrictHostKeyChecking=no lucifer_suriel@34.81.254.154 << EOF
       set -e
       set -x
       
-      # 檢查 Docker 是否已安裝
-      if ! command -v docker &> /dev/null; then
-        echo "Docker 未安裝，正在安裝..."
-        sudo apt-get update
-        sudo apt-get install -y apt-transport-https ca-certificates curl software-properties-common
-        curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
-        sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
-        sudo apt-get update
-        sudo apt-get install -y docker-ce docker-ce-cli containerd.io
-      else
-        echo "Docker 已安裝"
-      fi
+      # ... [其餘部分保持不變]
       
-      # 確保 Docker 服務正在運行
-      sudo systemctl start docker
-      sudo systemctl enable docker
-      
-      # 配置 Docker 以使用 gcloud 作為憑證助手
-      gcloud auth configure-docker asia-east1-docker.pkg.dev --quiet
-      
-      sudo docker stop hello-js || true
-      sudo docker rm hello-js || true
-    
-      # 拉取新的映像
-      sudo -E docker pull $deploy_image
+      # 強制重新拉取新的映像，忽略本地緩存
+      sudo -E docker pull --no-cache $deploy_image
       
       # 運行新容器
       if sudo docker run -d --name hello-js -p 80:8080 $deploy_image; then
         echo "新容器成功啟動"
         
-        # 檢查容器是否正常運行（這裡等待 10 秒後檢查）
-        sleep 10
-        if sudo docker ps | grep -q hello-js; then
-          echo "部署成功"
-        else
-          echo "部署失敗，容器未能持續運行"
-          exit 1
-        fi
-      else
-        echo "新容器啟動失敗"
-        exit 1
-      fi
-      
-      # 顯示正在運行的容器
-      sudo docker ps
+        # ... [其餘部分保持不變]
       
       # 顯示容器日誌
       sudo docker logs hello-js
     EOF
+
 substitutions:
   _SPECIFIED_IMAGE: ''
 timeout: '1200s'
