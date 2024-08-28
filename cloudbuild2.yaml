@@ -11,19 +11,16 @@ steps:
     set -e
     set -x
     
-    # 解析 Pub/Sub 消息中的 image
-    if [ -n "$_PUB_SUB_MESSAGE" ]; then
-      PARSED_IMAGE=$(echo $_PUB_SUB_MESSAGE | python3 -c "import sys, json; print(json.load(sys.stdin)['image'])")
-    else
-      PARSED_IMAGE=""
-    fi
-    
     # 決定要部署的 image
-    DEPLOY_IMAGE=${_SPECIFIED_IMAGE:-$PARSED_IMAGE}
-    if [ -z "$DEPLOY_IMAGE" ]; then
+    if [ -n "$_SPECIFIED_IMAGE" ]; then
+      DEPLOY_IMAGE="$_SPECIFIED_IMAGE"
+    elif [ -n "$_PUB_SUB_MESSAGE" ]; then
+      DEPLOY_IMAGE=$(echo $_PUB_SUB_MESSAGE | python3 -c "import sys, json; print(json.load(sys.stdin)['image'])")
+    else
       echo "錯誤：沒有指定要部署的 image"
       exit 1
     fi
+    
     echo "正在部署鏡像: $DEPLOY_IMAGE"
     
     # 安裝 SSH 客戶端
@@ -73,6 +70,5 @@ substitutions:
   _SPECIFIED_IMAGE: ''  # 用於手動指定部署的 image，例如回滾到特定版本
 
 timeout: '1200s'
-
 options:
   defaultLogsBucketBehavior: REGIONAL_USER_OWNED_BUCKET
