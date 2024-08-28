@@ -23,7 +23,7 @@ app.get('/', (req, res) => {
       </style>
     </head>
     <body>
-      Hello from Cloud Build! good !
+      Hello from Cloud Build! Bad ! Bad !
     </body>
     </html>
   `);
