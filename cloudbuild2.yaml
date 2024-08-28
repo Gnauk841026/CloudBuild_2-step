@@ -95,7 +95,7 @@ steps:
     EOF
 substitutions:
   _SPECIFIED_IMAGE: ''
-  _VM_IP: '34.81.254.154'
+  _VM_IP: '35.194.144.97'
 timeout: '1200s'
 options:
   defaultLogsBucketBehavior: REGIONAL_USER_OWNED_BUCKET
