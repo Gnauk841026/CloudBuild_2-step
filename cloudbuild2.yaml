@@ -11,17 +11,8 @@ steps:
     if [ -n "$_SPECIFIED_IMAGE" ]; then
       deploy_image="$_SPECIFIED_IMAGE"
     else
-      # 回到之前的方法獲取最新的鏡像標籤
-      latest_tag=$(gcloud artifacts docker tags list asia-east1-docker.pkg.dev/terraform-429505/my-registry/hello-js \
-        --format='value(tag)' \
-        --sort-by=~timestamp \
-        --limit=1)
-      
-      if [ -z "$latest_tag" ]; then
-        echo "無法獲取最新標籤，部署失敗"
-        exit 1
-      fi
-      
+      # 獲取最新的鏡像標籤
+      latest_tag=$(gcloud artifacts docker tags list asia-east1-docker.pkg.dev/terraform-429505/my-registry/hello-js --format='value(tag)' --sort-by=~timestamp --limit=1)
       deploy_image="asia-east1-docker.pkg.dev/terraform-429505/my-registry/hello-js:$latest_tag"
     fi
     
@@ -33,7 +24,7 @@ steps:
     # 準備 SSH
     mkdir -p /root/.ssh
     chmod 700 /root/.ssh
-    echo "$SSH_PRIVATE_KEY" > /root/.ssh/id_rsa
+    gcloud secrets versions access latest --secret=ssh-key > /root/.ssh/id_rsa
     chmod 600 /root/.ssh/id_rsa
     
     # 將 SSH 密鑰添加到 known_hosts
@@ -64,11 +55,20 @@ steps:
       # 配置 Docker 以使用 gcloud 作為憑證助手
       gcloud auth configure-docker asia-east1-docker.pkg.dev --quiet
       
+      # 停止所有運行中的容器
+      sudo docker stop $(sudo docker ps -aq) || true
+      
+      # 刪除所有容器
+      sudo docker rm $(sudo docker ps -aq) || true
+      
+      # 刪除所有映像
+      sudo docker rmi $(sudo docker images -q) || true
+      
       sudo docker stop hello-js || true
       sudo docker rm hello-js || true
     
-      # 強制重新拉取新的映像，忽略本地緩存
-      sudo -E docker pull --no-cache $deploy_image
+      # 拉取新的映像
+      sudo -E docker pull $deploy_image
       
       # 運行新容器
       if sudo docker run -d --name hello-js -p 80:8080 $deploy_image; then
@@ -93,15 +93,8 @@ steps:
       # 顯示容器日誌
       sudo docker logs hello-js
     EOF
-
 substitutions:
   _SPECIFIED_IMAGE: ''
 timeout: '1200s'
 options:
   defaultLogsBucketBehavior: REGIONAL_USER_OWNED_BUCKET
-
-# 添加秘密管理器
-secrets:
-- kmsKeyName: projects/terraform-429505/locations/global/keyRings/my-keyring/cryptoKeys/my-key
-  secretEnv:
-    SSH_PRIVATE_KEY: <your-encrypted-ssh-private-key>
