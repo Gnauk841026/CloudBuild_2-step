@@ -44,11 +44,14 @@ steps:
         curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
         sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
         sudo apt-get update
-        sudo apt-get install -y docker-ce
+        sudo apt-get install -y docker-ce docker-ce-cli containerd.io
       fi
       
+      # 配置 Docker 以使用 gcloud 作為憑證助手
+      sudo -u $USER gcloud auth configure-docker asia-east1-docker.pkg.dev
+      
       # 拉取指定鏡像
-      sudo docker pull $deploy_image
+      sudo -u $USER docker pull $deploy_image
       
       # 停止並移除舊容器（如果存在）
       sudo docker stop hello-js || true
