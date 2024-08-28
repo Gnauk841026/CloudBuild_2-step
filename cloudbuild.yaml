@@ -11,42 +11,15 @@ steps:
     - |
       gcloud artifacts repositories describe my-registry --location=asia-east1 || \
       gcloud artifacts repositories create my-registry --repository-format=docker --location=asia-east1 --description="Docker repository"
-
 # 構建 Docker 鏡像
 - name: 'gcr.io/cloud-builders/docker'
   dir: 'app'
   args: ['build', '-t', 'asia-east1-docker.pkg.dev/terraform-429505/my-registry/hello-js:${_COMMIT_SHA}', '.']
 
-# 添加 latest 標籤
+# 推送 Docker 鏡像到 Artifact Registry
 - name: 'gcr.io/cloud-builders/docker'
-  args: ['tag', 
-         'asia-east1-docker.pkg.dev/terraform-429505/my-registry/hello-js:${_COMMIT_SHA}',
-         'asia-east1-docker.pkg.dev/terraform-429505/my-registry/hello-js:latest']
-
-# 推送 Docker 鏡像到 Artifact Registry（包括 COMMIT_SHA 和 latest 標籤）
-- name: 'gcr.io/cloud-builders/docker'
+  dir: 'app'
   args: ['push', 'asia-east1-docker.pkg.dev/terraform-429505/my-registry/hello-js:${_COMMIT_SHA}']
-- name: 'gcr.io/cloud-builders/docker'
-  args: ['push', 'asia-east1-docker.pkg.dev/terraform-429505/my-registry/hello-js:latest']
-
-# 驗證標籤
-- name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
-  entrypoint: 'bash'
-  args:
-    - '-c'
-    - |
-      gcloud artifacts docker tags list asia-east1-docker.pkg.dev/terraform-429505/my-registry/hello-js \
-        --format='value(tag)' --filter='tag:${_COMMIT_SHA} OR tag:latest'
-
-# 清理舊鏡像（可選，請謹慎使用）
-# - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
-#   entrypoint: 'bash'
-#   args:
-#     - '-c'
-#     - |
-#       gcloud artifacts docker images delete asia-east1-docker.pkg.dev/terraform-429505/my-registry/hello-js \
-#         --delete-tags --quiet \
-#         --filter="createTime<$(date -d '30 days ago' '+%Y-%m-%d')"
 
 # 發送 Pub/Sub 消息觸發部署
 - name: 'gcr.io/cloud-builders/gcloud'
@@ -60,7 +33,6 @@ steps:
 
 images:
 - 'asia-east1-docker.pkg.dev/terraform-429505/my-registry/hello-js:${_COMMIT_SHA}'
-- 'asia-east1-docker.pkg.dev/terraform-429505/my-registry/hello-js:latest'
 
 substitutions:
   _PUBSUB_TOPIC: 'projects/terraform-429505/topics/deploy-trigger'  # 替換為您的 Pub/Sub 主題
