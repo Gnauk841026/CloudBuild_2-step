@@ -31,7 +31,8 @@ steps:
     ssh-keyscan -H 34.81.254.154 >> /root/.ssh/known_hosts
     
     # 獲取當前的 gcloud 配置
-    gcloud_config=$(gcloud config list --format=json)
+    gcloud_account=$(gcloud config get-value account)
+    gcloud_project=$(gcloud config get-value project)
     
     # 連接到 VM 並執行部署腳本
     ssh -i /root/.ssh/id_rsa -o StrictHostKeyChecking=no lucifer_suriel@34.81.254.154 << EOF
@@ -56,7 +57,8 @@ steps:
       sudo systemctl enable docker
       
       # 設置 gcloud 配置
-      echo '$gcloud_config' | gcloud config load -
+      gcloud config set account $gcloud_account
+      gcloud config set project $gcloud_project
       
       # 配置 Docker 以使用 gcloud 作為憑證助手
       gcloud auth configure-docker asia-east1-docker.pkg.dev --quiet
