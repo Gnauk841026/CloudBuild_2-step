@@ -28,97 +28,44 @@ steps:
     chmod 600 /root/.ssh/id_rsa
     
     # 將 SSH 密鑰添加到 known_hosts
-    ssh-keyscan -H 35.194.144.97 >> /root/.ssh/known_hosts
+    ssh-keyscan -H 34.81.254.154 >> /root/.ssh/known_hosts
     
     # 連接到 VM 並執行部署腳本
-    ssh -i /root/.ssh/id_rsa -o StrictHostKeyChecking=no lucifer_suriel@35.194.144.97 << EOF
+    ssh -i /root/.ssh/id_rsa -o StrictHostKeyChecking=no lucifer_suriel@34.81.254.154 << EOF
       set -e
       set -x
       
-      echo "步驟1: 檢查系統信息"
-      uname -a
-      cat /etc/os-release
-      
-      echo "步驟2: 檢查 Docker 是否已安裝"
-      if command -v docker &> /dev/null; then
-        echo "Docker 已安裝，版本信息："
-        docker --version
+      # 檢查 Docker 是否已安裝
+      if ! command -v docker &> /dev/null; then
+        echo "Docker 未安裝，正在安裝..."
+        sudo apt-get update
+        sudo apt-get install -y apt-transport-https ca-certificates curl software-properties-common
+        curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
+        sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
+        sudo apt-get update
+        sudo apt-get install -y docker-ce docker-ce-cli containerd.io
       else
-        echo "Docker 未安裝，開始安裝流程"
-        
-        echo "步驟3: 移除舊的 Docker 相關包"
-        sudo apt-get remove -y docker docker-engine docker.io containerd runc || true
-        
-        echo "步驟4: 更新包索引"
-        sudo apt-get update
-        
-        echo "步驟5: 安裝必要的包"
-        sudo apt-get install -y apt-transport-https ca-certificates curl gnupg lsb-release
-        
-        echo "步驟6: 添加 Docker 的官方 GPG 密鑰"
-        sudo install -m 0755 -d /etc/apt/keyrings
-        curl -fsSL https://download.docker.com/linux/debian/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
-        sudo chmod a+r /etc/apt/keyrings/docker.gpg
-        
-        echo "步驟7: 設置穩定版倉庫"
-        DEBIAN_CODENAME=\$(lsb_release -cs)
-        echo \
-          "deb [arch=\$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/debian \
-          \$DEBIAN_CODENAME stable" | \
-          sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
-        
-        echo "步驟8: 再次更新包索引"
-        sudo apt-get update
-        
-        echo "步驟9: 安裝 Docker Engine"
-        sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
-        
-        echo "步驟10: 檢查 Docker 安裝結果"
-        docker --version
+        echo "Docker 已安裝"
       fi
       
-      echo "步驟11: 確保 Docker 服務正在運行"
+      # 確保 Docker 服務正在運行
       sudo systemctl start docker
       sudo systemctl enable docker
-      sudo systemctl status docker
       
-      echo "步驟12: 配置 Docker 以使用 gcloud 作為憑證助手"
-      gcloud auth configure-docker asia-east1-docker.pkg.dev --quiet
+      # 停止並移除舊容器（如果存在）
+      sudo docker stop hello-js || true
+      sudo docker rm hello-js || true
       
-      echo "步驟13: 停止所有運行中的容器"
-      sudo docker stop \$(sudo docker ps -aq) || true
+      # 拉取新的映像
+      sudo docker pull $deploy_image
       
-      echo "步驟14: 刪除所有容器"
-      sudo docker rm \$(sudo docker ps -aq) || true
+      # 運行新容器
+      sudo docker run -d --name hello-js -p 80:3000 $deploy_image
       
-      echo "步驟15: 刪除所有映像"
-      sudo docker rmi \$(sudo docker images -q) || true
-      
-      echo "步驟16: 拉取新的映像"
-      sudo -E docker pull $deploy_image
-      
-      echo "步驟17: 運行新容器"
-      if sudo docker run -d --name hello-js -p 80:3000 $deploy_image; then
-        echo "新容器成功啟動"
-        
-        echo "步驟18: 檢查容器是否正常運行"
-        sleep 10
-        if sudo docker ps | grep -q hello-js; then
-          echo "部署成功"
-        else
-          echo "部署失敗，容器未能持續運行"
-          sudo docker logs hello-js
-          exit 1
-        fi
-      else
-        echo "新容器啟動失敗"
-        exit 1
-      fi
-      
-      echo "步驟19: 顯示正在運行的容器"
+      # 顯示正在運行的容器
       sudo docker ps
       
-      echo "步驟20: 顯示容器日誌"
+      # 顯示容器日誌
       sudo docker logs hello-js
     EOF
 substitutions:
