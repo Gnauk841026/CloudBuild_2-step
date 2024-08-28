@@ -12,7 +12,7 @@ steps:
       deploy_image="$_SPECIFIED_IMAGE"
     else
       # 獲取最新的鏡像標籤
-      latest_tag=$(gcloud artifacts docker tags list asia-east1-docker.pkg.dev/terraform-429505/my-registry/hello-js --format='value(tag,timestamp.datetime)' | head -n 1)
+      latest_tag=$(gcloud artifacts docker images list asia-east1-docker.pkg.dev/terraform-429505/my-registry/hello-js --include-tags --sort-by=~CREATE_TIME --limit=1 | awk '/TAGS:/ {print $2}')
       deploy_image="asia-east1-docker.pkg.dev/terraform-429505/my-registry/hello-js:$latest_tag"
     fi
     
