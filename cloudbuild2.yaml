@@ -30,6 +30,9 @@ steps:
     # 將 SSH 密鑰添加到 known_hosts
     ssh-keyscan -H 34.81.254.154 >> /root/.ssh/known_hosts
     
+    # 獲取當前的 gcloud 配置
+    gcloud_config=$(gcloud config list --format=json)
+    
     # 連接到 VM 並執行部署腳本
     ssh -i /root/.ssh/id_rsa -o StrictHostKeyChecking=no lucifer_suriel@34.81.254.154 << EOF
       set -e
@@ -52,6 +55,9 @@ steps:
       sudo systemctl start docker
       sudo systemctl enable docker
       
+      # 設置 gcloud 配置
+      echo '$gcloud_config' | gcloud config load -
+      
       # 配置 Docker 以使用 gcloud 作為憑證助手
       gcloud auth configure-docker asia-east1-docker.pkg.dev --quiet
       
@@ -63,7 +69,7 @@ steps:
       sudo docker system prune -af
       
       echo "拉取新的映像: $deploy_image"
-      if ! sudo docker pull $deploy_image; then
+      if ! sudo -E docker pull $deploy_image; then
         echo "拉取映像失敗，退出部署"
         exit 1
       fi
