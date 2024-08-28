@@ -6,7 +6,7 @@ steps:
   - |
     set -e
     set -x
-    
+
     # 決定要部署的 image
     if [ -n "$_SPECIFIED_IMAGE" ]; then
       deploy_image="$_SPECIFIED_IMAGE"
@@ -15,26 +15,26 @@ steps:
       latest_tag=$(gcloud artifacts docker tags list asia-east1-docker.pkg.dev/terraform-429505/my-registry/hello-js --format='value(tag,timestamp.datetime)' | sort -r | head -n 1)
       deploy_image="asia-east1-docker.pkg.dev/terraform-429505/my-registry/hello-js:$latest_tag"
     fi
-    
+
     echo "正在部署鏡像: $deploy_image"
-    
+
     # 安裝 SSH 客戶端
     apt-get update && apt-get install -y openssh-client
-    
+
     # 準備 SSH
     mkdir -p /root/.ssh
     chmod 700 /root/.ssh
     gcloud secrets versions access latest --secret=ssh-key > /root/.ssh/id_rsa
     chmod 600 /root/.ssh/id_rsa
-    
+
     # 將 SSH 密鑰添加到 known_hosts
-    ssh-keyscan -H $_VM_IP >> /root/.ssh/known_hosts
-    
+    ssh-keyscan -H 34.81.254.154 >> /root/.ssh/known_hosts
+
     # 連接到 VM 並執行部署腳本
-    ssh -i /root/.ssh/id_rsa -o StrictHostKeyChecking=no lucifer_suriel@$_VM_IP << EOF
+    ssh -i /root/.ssh/id_rsa -o StrictHostKeyChecking=no lucifer_suriel@34.81.254.154 << EOF
       set -e
       set -x
-      
+
       # 檢查 Docker 是否已安裝
       if ! command -v docker &> /dev/null; then
         echo "Docker 未安裝，正在安裝..."
@@ -47,33 +47,33 @@ steps:
       else
         echo "Docker 已安裝"
       fi
-      
+
       # 確保 Docker 服務正在運行
       sudo systemctl start docker
       sudo systemctl enable docker
-      
+
       # 配置 Docker 以使用 gcloud 作為憑證助手
       gcloud auth configure-docker asia-east1-docker.pkg.dev --quiet
-      
+
       # 停止所有運行中的容器
       sudo docker stop $(sudo docker ps -aq) || true
-      
+
       # 刪除所有容器
       sudo docker rm $(sudo docker ps -aq) || true
-      
+
       # 刪除所有映像
       sudo docker rmi $(sudo docker images -q) || true
-      
+
       sudo docker stop hello-js || true
       sudo docker rm hello-js || true
-    
+
       # 拉取新的映像
       sudo -E docker pull $deploy_image
-      
+
       # 運行新容器
       if sudo docker run -d --name hello-js -p 80:8080 $deploy_image; then
         echo "新容器成功啟動"
-        
+
         # 檢查容器是否正常運行（這裡等待 10 秒後檢查）
         sleep 10
         if sudo docker ps | grep -q hello-js; then
@@ -86,16 +86,15 @@ steps:
         echo "新容器啟動失敗"
         exit 1
       fi
-      
+
       # 顯示正在運行的容器
       sudo docker ps
-      
+
       # 顯示容器日誌
       sudo docker logs hello-js
     EOF
 substitutions:
-  _SPECIFIED_IMAGE: ''
-  _VM_IP: '35.194.144.97'
+  SPECIFIEDIMAGE: ''
 timeout: '1200s'
 options:
   defaultLogsBucketBehavior: REGIONAL_USER_OWNED_BUCKET
