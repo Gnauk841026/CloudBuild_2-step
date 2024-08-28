@@ -10,11 +10,10 @@ steps:
     # 決定要部署的 image
     if [ -n "$_SPECIFIED_IMAGE" ]; then
       deploy_image="$_SPECIFIED_IMAGE"
-    elif [ -n "$_PUB_SUB_MESSAGE" ]; then
-      deploy_image=$(echo $_PUB_SUB_MESSAGE | python3 -c "import sys, json; print(json.load(sys.stdin)['image'])")
     else
-      echo "錯誤：沒有指定要部署的 image"
-      exit 1
+      # 獲取最新的鏡像標籤
+      latest_tag=$(gcloud artifacts docker tags list asia-east1-docker.pkg.dev/terraform-429505/my-registry/hello-js --format='value(tag)' --sort-by=~timestamp --limit=1)
+      deploy_image="asia-east1-docker.pkg.dev/terraform-429505/my-registry/hello-js:$latest_tag"
     fi
     
     echo "正在部署鏡像: $deploy_image"
@@ -50,8 +49,8 @@ steps:
       # 配置 Docker 以使用 gcloud 作為憑證助手
       gcloud auth configure-docker asia-east1-docker.pkg.dev --quiet
       
-      # 拉取指定鏡像
-      sudo docker pull $deploy_image
+      # 使用 gcloud 作為憑證幫助程序來拉取指定鏡像
+      sudo -E docker pull $deploy_image
       
       # 停止並移除舊容器（如果存在）
       sudo docker stop hello-js || true
@@ -64,9 +63,7 @@ steps:
       sudo docker ps
     EOF
 substitutions:
-  '_PUB_SUB_MESSAGE': ''
   '_SPECIFIED_IMAGE': ''
 timeout: '1200s'
 options:
   defaultLogsBucketBehavior: REGIONAL_USER_OWNED_BUCKET
-
