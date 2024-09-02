@@ -35,10 +35,10 @@ steps:
     chmod 600 /root/.ssh/id_rsa
     
     # 將 SSH 密鑰添加到 known_hosts
-    ssh-keyscan -H 35.194.174.235 >> /root/.ssh/known_hosts
+    ssh-keyscan -H 34.81.143.208 >> /root/.ssh/known_hosts
     
     # 連接到 VM 並執行部署腳本
-    ssh -i /root/.ssh/id_rsa -o StrictHostKeyChecking=no lucifer_suriel@35.194.174.235 << EOF
+    ssh -i /root/.ssh/id_rsa -o StrictHostKeyChecking=no lucifer_suriel@34.81.143.208 << EOF
       set -e
       set -x
       
